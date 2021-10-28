@@ -1,7 +1,19 @@
 
 <h1 align="center"> imgui-cmake </h1>
 <p align="center">
-A CMake compatible version of <a href="https://github.com/ocornut/imgui">imgui</a>!
+A CMake compatible version of <a href="https://github.com/ocornut/imgui">imgui</a>
+</p>
+
+<p align="center">
+    <a href="https://github.com/Curve/imgui-cmake/actions">
+        <img src="https://img.shields.io/github/workflow/status/Curve/imgui-cmake/Test%20on%20Linux?label=Linux%20Build&style=flat-square" alt="Linux Build" />
+    </a>
+    <a href="https://github.com/Curve/imgui-cmake/actions">
+        <img src="https://img.shields.io/github/workflow/status/Curve/imgui-cmake/Test%20on%20Windows?label=Windows%20Build&style=flat-square" alt="Windows Build" />
+    </a>
+    <a href="https://github.com/Curve/imgui-cmake/blob/master/LICENSE">
+        <img src="https://img.shields.io/github/license/Curve/imgui-cmake.svg?style=flat-square" alt="License" />
+    </a>
 </p>
 
 ---
