@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 project(imgui LANGUAGES CXX VERSION 1.85)
 
 # --------------------------------------------------------------------------------------------------------
@@ -9,6 +9,7 @@ option(imgui_demo "Include demo code" ON)
 option(imgui_example "Build an example" OFF)
 option(imgui_tables "Include tables code" ON)
 option(imgui_widgets "Include widget code" ON)
+option(imgui_shared "Build as shared library" OFF)
 
 set(imgui_backend_types None SDL GLFW GLUT WIN32)
 set(imgui_render_types D3D9 D3D10 D3D11 D3D12 OpenGL2 OpenGL3 Vulkan WGPU SDL)
@@ -56,7 +57,11 @@ endif()
 # Create the library
 # --------------------------------------------------------------------------------------------------------
 
-add_library(${PROJECT_NAME} STATIC ${src})
+if (imgui_shared)
+    add_library(${PROJECT_NAME} SHARED ${src})
+else()
+    add_library(${PROJECT_NAME} STATIC ${src})
+endif()
 target_include_directories(${PROJECT_NAME} PUBLIC "imgui" "imgui/backends")
 
 # --------------------------------------------------------------------------------------------------------
@@ -91,12 +96,16 @@ elseif(${imgui_render} STREQUAL "WGPU")
 elseif(${imgui_render} STREQUAL "SDL")
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_sdlrender.cpp")
 elseif(${imgui_render} STREQUAL "D3D9")
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d9)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx9.cpp")
 elseif(${imgui_render} STREQUAL "D3D10")
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d10)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx10.cpp")
 elseif(${imgui_render} STREQUAL "D3D11")
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx11.cpp")
 elseif(${imgui_render} STREQUAL "D3D12")
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx12.cpp")
 endif()
 
@@ -122,7 +131,7 @@ elseif(${imgui_backend} STREQUAL "GLUT")
     endif()
     target_link_libraries(${PROJECT_NAME} PUBLIC GLUT::GLUT)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_glut.cpp")
-elseif(${imgui_backend} STREQUAL "WIN32")
+elseif(${imgui_backend} STREQUAL WIN32)
     target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_win32.cpp")
 endif()
 
@@ -135,7 +144,18 @@ if (imgui_example)
 
     string(TOLOWER ${imgui_render} render_lower)
     string(TOLOWER ${imgui_backend} backend_lower)
-    if (EXISTS "example_${backend_lower}_${render_lower}")
+
+    if(${imgui_render} STREQUAL "D3D9")
+        set(render_lower "directx9")
+    elseif(${imgui_render} STREQUAL "D3D10")
+        set(render_lower "directx10")
+    elseif(${imgui_render} STREQUAL "D3D11")
+        set(render_lower "directx11")
+    elseif(${imgui_render} STREQUAL "D3D12")
+        set(render_lower "directx12")
+    endif()
+
+    if (EXISTS "${PROJECT_SOURCE_DIR}/imgui/examples/example_${backend_lower}_${render_lower}")
         add_executable(imgui_example "imgui/examples/example_${backend_lower}_${render_lower}/main.cpp")
         target_link_libraries(imgui_example PRIVATE imgui)
     else()

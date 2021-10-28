@@ -12,6 +12,11 @@ A CMake compatible version of <a href="https://github.com/ocornut/imgui">imgui</
 set(imgui_example ON)
 ```
 > Will build an example project
+### Shared
+```cmake
+set(imgui_shared ON)
+```
+> Will build imgui as a shared library
 ### Demo
 ```cmake
 set(imgui_demo ON)
