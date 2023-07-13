@@ -1,164 +1,198 @@
 cmake_minimum_required(VERSION 3.16)
-project(imgui LANGUAGES CXX VERSION 1.85)
+project(imgui LANGUAGES CXX)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
 # --------------------------------------------------------------------------------------------------------
 
-option(imgui_demo "Include demo code" ON)
-option(imgui_example "Build an example" OFF)
-option(imgui_tables "Include tables code" ON)
-option(imgui_widgets "Include widget code" ON)
-option(imgui_shared "Build as shared library" OFF)
+option(imgui_demo         "Include demo code (ShowDemoWindow)"          ON)
+option(imgui_shared       "Build ImGui as a shared library"            OFF)
+option(imgui_tables       "Include ImGuis tables library"               ON)
+option(imgui_widgets      "Include ImGuis widget library"               ON)
 
-set(imgui_backend_types None SDL GLFW GLUT WIN32)
-set(imgui_render_types D3D9 D3D10 D3D11 D3D12 OpenGL2 OpenGL3 Vulkan WGPU SDL)
+# --------------------------------------------------------------------------------------------------------
+# Library config
+# --------------------------------------------------------------------------------------------------------
 
-set(imgui_backend None CACHE STRING "The backend ImGui should use.")
-set(imgui_render None CACHE STRING "The render-backend ImGui should use.")
+set(imgui_version  "v1.89.7" CACHE STRING "The ImGui version to use")
+set(imgui_renderer "Unknown" CACHE STRING "The ImGui renderer to use")
+set(imgui_platform "Unknown" CACHE STRING "The ImGui platform (backend) to use")
 
-set_property(CACHE imgui_render PROPERTY STRINGS ${imgui_render_types})
-set_property(CACHE imgui_backend PROPERTY STRINGS ${imgui_backend_types})
+# --------------------------------------------------------------------------------------------------------
+# Ensure valid config
+# --------------------------------------------------------------------------------------------------------
 
-if (NOT imgui_backend IN_LIST imgui_backend_types)
-    message(FATAL_ERROR "ImGui backend must be one of ${imgui_backend_types}")
-else()
-    message(STATUS "Backend: ${imgui_backend}")
+set(supported_renderers "DirectX9" "DirectX10" "DirectX11" "DirectX12" "Metal" "OpenGL2" "OpenGL3" "SDL_Renderer2" "SDL_Renderer3" "Vulkan" "WebGPU")
+set(supported_platforms "Unknown" "GLFW" "SDL2" "SDL3" "Win32" "Glut" "OSX" "Android")
+
+set_property(CACHE imgui_renderer PROPERTY STRINGS ${supported_renderers})
+set_property(CACHE imgui_platform PROPERTY STRINGS ${supported_platforms})
+
+if (NOT imgui_renderer IN_LIST supported_renderers)
+    message(FATAL_ERROR "Renderer must be one of ${supported_renderers}")
 endif()
-    
-if (NOT imgui_render IN_LIST imgui_render_types)
-    message(FATAL_ERROR "ImGui render-backend must be one of ${imgui_render_types}")
-else()
-    message(STATUS "Render-Backend: ${imgui_render}")
+
+if (NOT imgui_platform IN_LIST supported_platforms)
+    message(FATAL_ERROR "Renderer must be one of ${supported_platforms}")
 endif()
 
 # --------------------------------------------------------------------------------------------------------
-# Gather required files
+# Conditionally Shared / Static
 # --------------------------------------------------------------------------------------------------------
 
-file(GLOB src "imgui/imgui.cpp" "imgui/imgui_draw.cpp")
-
-message(STATUS "Widgets: ${imgui_widgets}")
-if (imgui_widgets)
-    list(APPEND src "imgui/imgui_widgets.cpp")
-endif()
-
-message(STATUS "Demo: ${imgui_widgets}")
-if (imgui_demo)
-    list(APPEND src "imgui/imgui_demo.cpp")
-endif()
-
-message(STATUS "Tables: ${imgui_tables}")
-if (imgui_tables)
-    list(APPEND src "imgui/imgui_tables.cpp")
-endif()
-
-# --------------------------------------------------------------------------------------------------------
-# Create the library
-# --------------------------------------------------------------------------------------------------------
+set(TYPE STATIC)
 
 if (imgui_shared)
-    add_library(${PROJECT_NAME} SHARED ${src})
-else()
-    add_library(${PROJECT_NAME} STATIC ${src})
+    set(TYPE SHARED)
 endif()
-target_include_directories(${PROJECT_NAME} PUBLIC "imgui" "imgui/backends")
 
 # --------------------------------------------------------------------------------------------------------
-# Link the required renderer
+# Setup library
 # --------------------------------------------------------------------------------------------------------
 
-if(${imgui_render} STREQUAL "Vulkan")
-    if (NOT TARGET Vulkan::Vulkan)
-        find_package(Vulkan REQUIRED)
-    endif()
-    target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_vulkan.cpp")
-elseif(${imgui_render} STREQUAL "OpenGL2")
-    if(POLICY CMP0072)
-        set(OpenGL_GL_PREFERENCE GLVND)
-    endif()
-    find_package(OpenGL "2" REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PUBLIC OpenGL::GL)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_opengl2.cpp")
-elseif(${imgui_render} STREQUAL "OpenGL3")
-    if(POLICY CMP0072)
-        set(OpenGL_GL_PREFERENCE GLVND)
-    endif()
-    find_package(OpenGL "3" REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PUBLIC OpenGL::GL)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_opengl3.cpp")
-    if (UNIX)
-        target_link_libraries(${PROJECT_NAME} PRIVATE dl)
-    endif()
-elseif(${imgui_render} STREQUAL "WGPU")
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_wgpu.cpp")
-elseif(${imgui_render} STREQUAL "SDL")
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_sdlrender.cpp")
-elseif(${imgui_render} STREQUAL "D3D9")
+add_library(${PROJECT_NAME} ${TYPE})
+add_library(ocornut::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+# --------------------------------------------------------------------------------------------------------
+# Obtain ImGui Source
+# --------------------------------------------------------------------------------------------------------
+
+include("cmake/cpm.cmake")
+
+CPMAddPackage(
+  NAME               imgui
+  GIT_TAG            ${imgui_version}
+  GITHUB_REPOSITORY  "ocornut/imgui"
+  DOWNLOAD_ONLY
+)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup includes
+# --------------------------------------------------------------------------------------------------------
+
+target_include_directories(${PROJECT_NAME} PUBLIC "${imgui_SOURCE_DIR}")
+target_include_directories(${PROJECT_NAME} PUBLIC "${imgui_SOURCE_DIR}/backends")
+
+# --------------------------------------------------------------------------------------------------------
+# Setup sources
+# --------------------------------------------------------------------------------------------------------
+
+target_sources(${PROJECT_NAME} PRIVATE 
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+)
+
+if (imgui_tables)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/imgui_tables.cpp")
+endif()
+
+if (imgui_widgets)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/imgui_widgets.cpp")
+endif()
+
+if (imgui_demo)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/imgui_demo.cpp")
+endif()
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Renderers
+# --------------------------------------------------------------------------------------------------------
+
+if (imgui_renderer STREQUAL "DirectX9")
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d9)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx9.cpp")
-elseif(${imgui_render} STREQUAL "D3D10")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "DirectX10")
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d10)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx10.cpp")
-elseif(${imgui_render} STREQUAL "D3D11")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_dx10.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "DirectX11")
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d11)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx11.cpp")
-elseif(${imgui_render} STREQUAL "D3D12")
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_dx12.cpp")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp")
 endif()
 
-# --------------------------------------------------------------------------------------------------------
-# Link the required backend
-# --------------------------------------------------------------------------------------------------------
+if (imgui_renderer STREQUAL "DirectX12")
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp")
+endif()
 
-if (${imgui_backend} STREQUAL "SDL")
-    if (NOT TARGET SDL2::SDL2)
-        find_package(SDL2 REQUIRED)
-    endif()
+if (imgui_renderer STREQUAL "Metal")
+    # This might need additional libraries linked, however I don't have a mac to test this with.
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_metal.mm")
+endif()
+
+if (imgui_renderer STREQUAL "OpenGL2")
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenGL::GL)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl2.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "OpenGL3")
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenGL::GL)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "SDL_Renderer2")
+    find_package(SDL2 REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC SDL2::SDL2)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_sdl.cpp")
-elseif(${imgui_backend} STREQUAL "GLFW")
-    if (NOT TARGET glfw)
-        find_package(glfw3 REQUIRED)
-    endif()
-    target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_glfw.cpp")
-elseif(${imgui_backend} STREQUAL "GLUT")
-    if (NOT TARGET GLUT::GLUT)
-        find_package(GLUT REQUIRED)
-    endif()
-    target_link_libraries(${PROJECT_NAME} PUBLIC GLUT::GLUT)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_glut.cpp")
-elseif(${imgui_backend} STREQUAL WIN32)
-    target_sources(${PROJECT_NAME} PRIVATE "imgui/backends/imgui_impl_win32.cpp")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer2.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "SDL_Renderer3")
+    find_package(SDL3 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "Vulkan")
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "WebGPU")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_wgpu.cpp")
 endif()
 
 # --------------------------------------------------------------------------------------------------------
-# Build example
+# Setup Platforms
 # --------------------------------------------------------------------------------------------------------
 
-if (imgui_example)
-    message(STATUS "Building example")
+if (imgui_renderer STREQUAL "GLFW")
+    find_package(glfw3 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp")
+endif()
 
-    string(TOLOWER ${imgui_render} render_lower)
-    string(TOLOWER ${imgui_backend} backend_lower)
+if (imgui_renderer STREQUAL "SDL2")
+    find_package(SDL2 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC SDL2::SDL2)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp")
+endif()
 
-    if(${imgui_render} STREQUAL "D3D9")
-        set(render_lower "directx9")
-    elseif(${imgui_render} STREQUAL "D3D10")
-        set(render_lower "directx10")
-    elseif(${imgui_render} STREQUAL "D3D11")
-        set(render_lower "directx11")
-    elseif(${imgui_render} STREQUAL "D3D12")
-        set(render_lower "directx12")
-    endif()
+if (imgui_renderer STREQUAL "SDL3")
+    find_package(SDL3 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp")
+endif()
 
-    if (EXISTS "${PROJECT_SOURCE_DIR}/imgui/examples/example_${backend_lower}_${render_lower}")
-        add_executable(imgui_example "imgui/examples/example_${backend_lower}_${render_lower}/main.cpp")
-        target_link_libraries(imgui_example PRIVATE imgui)
-    else()
-        message(FATAL_ERROR "Could not find example matching current configuration")
-    endif()
+if (imgui_renderer STREQUAL "Win32")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "Glut")
+    find_package(GLUT REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC GLUT::GLUT)
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_glut.cpp")
+endif()
+
+if (imgui_renderer STREQUAL "OSX")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_osx.mm")
+endif()
+
+if (imgui_renderer STREQUAL "Android")
+    target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_android.cpp")
 endif()
