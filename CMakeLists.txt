@@ -161,38 +161,38 @@ endif()
 # Setup Platforms
 # --------------------------------------------------------------------------------------------------------
 
-if (imgui_renderer STREQUAL "GLFW")
+if (imgui_platform STREQUAL "GLFW")
     find_package(glfw3 REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp")
 endif()
 
-if (imgui_renderer STREQUAL "SDL2")
+if (imgui_platform STREQUAL "SDL2")
     find_package(SDL2 REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC SDL2::SDL2)
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp")
 endif()
 
-if (imgui_renderer STREQUAL "SDL3")
+if (imgui_platform STREQUAL "SDL3")
     find_package(SDL3 REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp")
 endif()
 
-if (imgui_renderer STREQUAL "Win32")
+if (imgui_platform STREQUAL "Win32")
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp")
 endif()
 
-if (imgui_renderer STREQUAL "Glut")
+if (imgui_platform STREQUAL "Glut")
     find_package(GLUT REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC GLUT::GLUT)
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_glut.cpp")
 endif()
 
-if (imgui_renderer STREQUAL "OSX")
+if (imgui_platform STREQUAL "OSX")
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_osx.mm")
 endif()
 
-if (imgui_renderer STREQUAL "Android")
+if (imgui_platform STREQUAL "Android")
     target_sources(${PROJECT_NAME} PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_android.cpp")
 endif()
