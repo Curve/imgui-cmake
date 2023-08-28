@@ -14,7 +14,7 @@ option(imgui_widgets      "Include ImGuis widget library"               ON)
 # Library config
 # --------------------------------------------------------------------------------------------------------
 
-set(imgui_version  "v1.89.7" CACHE STRING "The ImGui version to use")
+set(imgui_version  "v1.89.8" CACHE STRING "The ImGui version to use")
 set(imgui_renderer "Unknown" CACHE STRING "The ImGui renderer to use")
 set(imgui_platform "Unknown" CACHE STRING "The ImGui platform (backend) to use")
 
